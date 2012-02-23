@@ -34,16 +34,16 @@ class Chart:
             facecolors.insert(0, self.gray)
             ax.broken_barh(bars, (dim,2), facecolors=facecolors)
             dim += 5
-
         box = ax.get_position()
         ax.set_position([box.x0, box.y0 + box.height * 0.1,
             box.width, box.height * 0.5])
 
-        lgd = legend(proxies, labels, loc='upper center',bbox_to_anchor=(0.5, -0.15), ncol=5,fancybox=True, shadow=True)
+        legend(proxies, labels, loc='upper center',
+                bbox_to_anchor=(0.5, -0.15), ncol=5, fancybox=True, 
+                shadow=True)
 
         #limite do eixo Y
         ax.set_ylim(0, 35) 
-        ax.set_label('label1')
         #limite do eixo X (definido pelo tempo de execucao dos modulos
         ax.set_xlim(time[0], time[1])
 
@@ -63,6 +63,16 @@ class Reader:
         self.log = self.file.readlines()
         self__apps = self.get_apps()
     
+    def to_centiseconds(self,ms):
+        if ms.count('.'):
+            l = list(ms)
+            i = l.index('.')
+            l.pop(i)
+            l.insert(i-1, '.')
+            l = l.__getslice__(0, len(l)-2)
+            return ''.join(l)
+        return ms
+
     def get_file(self):
         return self.log
 
@@ -76,13 +86,13 @@ class Reader:
         return self.__apps
 
     def get_total_execution_time(self):
-        start = int(self.log[0].split(',')[2].split(' ')[0].replace('.',''))
-        end = int(self.log[len(self.log)-1].split(',')[2].split(' ')[0].replace('.',''))
+        start = float(self.log[0].split(',')[2].split(' ')[0])
+        end = float(self.log[len(self.log)-1].split(',')[2].split(' ')[0])
 
         return (start, end)
 
     def treat_time(self, time):
-        return int(time.split(' ')[0].replace('.', ''))
+        return float(time.split(' ')[0])
 
     def treat_name(self, name):
         return name.split('.')[0]
@@ -151,5 +161,5 @@ if __name__ == '__main__':
         for tup in reader.activity_from(app):
             activities[app].append(tup)
 
-
+    print time
     chart = Chart(activities, time)
