@@ -3,6 +3,8 @@
 import sys
 from tkFileDialog import askopenfilename
 from matplotlib import pyplot as plt
+from matplotlib.pyplot import legend
+from matplotlib.patches import Rectangle
 from random import random
 from Tkinter import Tk
 
@@ -12,32 +14,45 @@ class Chart:
     
 
     def __init__(self, act, time):
-        fig = plt.figure()
-        ax = fig.add_subplot(211)
+        fig = plt.figure(figsize=(13,7))
+        ax = plt.subplot(111)
         dim = 5
-
+        #broken_barh are not supported to create legends so
+        #we have to use a proxy artist.
+        proxies = []
+        labels = []
+        proxies.append(ax.plot(0,0,'k:'))
+        labels.append('not configured')
+        proxies.append(Rectangle((0,0),1,1,fc=self.gray))
+        labels.append('idle')
         for times in act.values():
             color = self.colors.pop(int(random()*len(self.colors)-1))
             bars = [(t[0], (t[0]-t[1])*-1) for t in times]
             facecolors = [color for i in range(len(bars)-1)]
+            proxies.append(Rectangle((0,0),1,1,fc=color))
+            labels.append('running')
             facecolors.insert(0, self.gray)
             ax.broken_barh(bars, (dim,2), facecolors=facecolors)
             dim += 5
 
+        box = ax.get_position()
+        ax.set_position([box.x0, box.y0 + box.height * 0.1,
+            box.width, box.height * 0.5])
+
+        lgd = legend(proxies, labels, loc='upper center',bbox_to_anchor=(0.5, -0.15), ncol=5,fancybox=True, shadow=True)
+
         #limite do eixo Y
         ax.set_ylim(0, 35) 
-
+        ax.set_label('label1')
         #limite do eixo X (definido pelo tempo de execucao dos modulos
         ax.set_xlim(time[0], time[1])
 
-        ax.set_xlabel('Tempo de execucao ----->')
+        ax.set_xlabel('Execution time --->')
 
         ax.set_yticks([6,11])
         ax.set_yticklabels(act.keys())
-
-
         ax.grid(True)
-        plt.title('Analise dos modulos')
+        plt.title("Modules' analysis")
         plt.show()
 
 class Reader:
@@ -65,50 +80,6 @@ class Reader:
         end = int(self.log[len(self.log)-1].split(',')[2].split(' ')[0].replace('.',''))
 
         return (start, end)
-
-    #deprecated
-    def get_apps_activy(self):
-        activity = {}
-        for app in self.__apps:
-            running = False
-            activity[app] = []
-            for line in self.log:
-                line = line.split(',')
-                stat = line[0]
-                name = self.treat_name(line[1])
-                time = self.treat_time(line[2])
-                if stat != 'ON' and stat != 'OFF' and name != 'confManager':
-                    if app == name and not running:
-                        if not activity[app].count(time):
-                            activity[app].append(time)
-                            running = True
-                    else:
-                        if running and name != app:
-                            if not activity[app].count(time):
-                                activity[app].append(time)
-                                running = False
-                if running and name != app:
-                    if not activity[app].count(time):
-                        activity[app].append(time)
-        return activity
-
-    #deprecated
-    def get_info(self):
-        activy = {}
-        for app in self.__apps:
-            activy[app] = []
-            log = self.log
-            for i in range(len(log)):
-                line = log[i].split(',')
-                status = line[0].lower()
-                current = self.treat_name(line[1])
-                time = self.treat_time(line[2])
-                if app == current and status == 'read' or status =='write':
-                    if len(activy[app]) == 0:
-                        activy[app].append((time,))
-                    else:
-                        activy[app].append(activy[app].pop().__getslice__(0,1)+(time,))
-        print activy
 
     def treat_time(self, time):
         return int(time.split(' ')[0].replace('.', ''))
@@ -180,6 +151,5 @@ if __name__ == '__main__':
         for tup in reader.activity_from(app):
             activities[app].append(tup)
 
-    print activities
 
     chart = Chart(activities, time)
