@@ -14,6 +14,9 @@ class Chart:
     
 
     def __init__(self, act, time):
+        self.setup(act, time)
+
+    def setup(self, act, time):
         fig = plt.figure(figsize=(13,7))
         ax = plt.subplot(111)
         dim = 5
@@ -42,16 +45,18 @@ class Chart:
                 bbox_to_anchor=(0.5, -0.15), ncol=5, fancybox=True, 
                 shadow=True)
 
-        #limite do eixo Y
         ax.set_ylim(0, 35) 
-        #limite do eixo X (definido pelo tempo de execucao dos modulos
+
         ax.set_xlim(time[0], time[1])
 
         ax.set_xlabel('Execution time --->')
 
         ax.set_yticks([6,11])
+
         ax.set_yticklabels(act.keys())
+
         ax.grid(True)
+
         plt.title("Modules' analysis")
         plt.show()
 
@@ -63,16 +68,6 @@ class Reader:
         self.log = self.file.readlines()
         self__apps = self.get_apps()
     
-    def to_centiseconds(self,ms):
-        if ms.count('.'):
-            l = list(ms)
-            i = l.index('.')
-            l.pop(i)
-            l.insert(i-1, '.')
-            l = l.__getslice__(0, len(l)-2)
-            return ''.join(l)
-        return ms
-
     def get_file(self):
         return self.log
 
@@ -161,5 +156,4 @@ if __name__ == '__main__':
         for tup in reader.activity_from(app):
             activities[app].append(tup)
 
-    print time
     chart = Chart(activities, time)
