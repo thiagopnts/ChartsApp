@@ -7,6 +7,7 @@ from matplotlib.pyplot import legend
 from matplotlib.patches import Rectangle
 from random import random
 from Tkinter import Tk
+from copy import copy
 
 class Chart:
     colors = ['b', 'g', 'r', 'c', 'm', 'y', 'k', 'w']
@@ -65,9 +66,54 @@ class Reader:
 
     def __init__(self, path=None):
         self.file = open(path, "r")
+        header = self.file.readline().split(',')
+        self.fpga, self.size = header[1], header[2]
         self.log = self.file.readlines()
-        self__apps = self.get_apps()
+        self.modules_info = self.get_modules_info()
+        self.__apps = self.get_apps()
+
+    def generate_report(self, acts):
+        report = file('report.txt', 'a')
+
+        total_sim = self.get_total_execution_time()[1]
+        final_power = 0
+        final_percent = 0
+        final_on = 0
+        for info in self.modules_info:
+            total_on = 0
+            for i in xrange(1, len(acts[info[0]])):
+                module = info[0]
+                power = int(info[1])
+                percent = self.get_percent(info[2])
+
+                total_on += acts[info[0]][i][1] - acts[info[0]][i][0]
+                total_exec = acts[info[0]][0][1] - acts[info[0]][0][0]
+                total_idle = total_exec - total_on
+                final_power += power
+                final_percent += percent
+                final_on += total_on
+            report.write(module+';'+str(power)+'w;'+str(percent)+'%;'+str(total_exec)+'ms;'+str(total_idle)+'ms;'+str(total_on)+'ms;'+str(total_sim)+'ms\n')
+        report.write('TOTAL;'+str(final_power)+'w;'+str(final_on)+'ms;'+str(final_percent)+'%;'+str(total_sim)+'ms\n')
+        report.close()
+        return report
     
+    def get_percent(self, module_size):
+        return int(100 * float(module_size)/float(self.size))
+
+
+    def get_modules_info(self):
+        module_info = []
+        wrapper = copy(self.log)
+        for line in wrapper:
+            inf = line.strip().split(',')
+            if inf[0] != 'INFO':
+                break
+            else:
+                module_info.append([inf[1],inf[2], inf[3]])
+                self.log.remove(line)
+        return module_info
+    
+
     def get_file(self):
         return self.log
 
@@ -146,7 +192,9 @@ if __name__ == '__main__':
 
     apps = reader.get_apps()
     time = reader.get_total_execution_time()
-
+    print reader.modules_info
+    print reader.fpga
+    print reader.size
     activities = {} 
 
     for app in apps:
@@ -156,4 +204,7 @@ if __name__ == '__main__':
         for tup in reader.activity_from(app):
             activities[app].append(tup)
 
+    reader.generate_report(activities)
+    print activities
+    print time
     chart = Chart(activities, time)
